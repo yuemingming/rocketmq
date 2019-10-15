@@ -23,13 +23,18 @@ package org.apache.rocketmq.common.protocol.route;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+
 import org.apache.rocketmq.remoting.protocol.RemotingSerializable;
 
 public class TopicRouteData extends RemotingSerializable {
-    private String orderTopicConf;
-    private List<QueueData> queueDatas;
-    private List<BrokerData> brokerDatas;
-    private HashMap<String/* brokerAddr */, List<String>/* Filter Server */> filterServerTable;
+
+    private String orderTopicConf;//顺序消息配置内容，来自于 kvConfig
+
+    private List<QueueData> queueDatas;//队列元数据
+
+    private List<BrokerData> brokerDatas;//topic 分布的 broker 元数据
+
+    private HashMap<String/* brokerAddr */, List<String>/* Filter Server */> filterServerTable;//Broker 上过滤服务器地址列表
 
     public TopicRouteData cloneTopicRouteData() {
         TopicRouteData topicRouteData = new TopicRouteData();
@@ -98,39 +103,50 @@ public class TopicRouteData extends RemotingSerializable {
 
     @Override
     public boolean equals(Object obj) {
-        if (this == obj)
+        if (this == obj) {
             return true;
-        if (obj == null)
+        }
+        if (obj == null) {
             return false;
-        if (getClass() != obj.getClass())
+        }
+        if (getClass() != obj.getClass()) {
             return false;
+        }
         TopicRouteData other = (TopicRouteData) obj;
         if (brokerDatas == null) {
-            if (other.brokerDatas != null)
+            if (other.brokerDatas != null) {
                 return false;
-        } else if (!brokerDatas.equals(other.brokerDatas))
+            }
+        } else if (!brokerDatas.equals(other.brokerDatas)) {
             return false;
+        }
         if (orderTopicConf == null) {
-            if (other.orderTopicConf != null)
+            if (other.orderTopicConf != null) {
                 return false;
-        } else if (!orderTopicConf.equals(other.orderTopicConf))
+            }
+        } else if (!orderTopicConf.equals(other.orderTopicConf)) {
             return false;
+        }
         if (queueDatas == null) {
-            if (other.queueDatas != null)
+            if (other.queueDatas != null) {
                 return false;
-        } else if (!queueDatas.equals(other.queueDatas))
+            }
+        } else if (!queueDatas.equals(other.queueDatas)) {
             return false;
+        }
         if (filterServerTable == null) {
-            if (other.filterServerTable != null)
+            if (other.filterServerTable != null) {
                 return false;
-        } else if (!filterServerTable.equals(other.filterServerTable))
+            }
+        } else if (!filterServerTable.equals(other.filterServerTable)) {
             return false;
+        }
         return true;
     }
 
     @Override
     public String toString() {
-        return "TopicRouteData [orderTopicConf=" + orderTopicConf + ", queueDatas=" + queueDatas
-            + ", brokerDatas=" + brokerDatas + ", filterServerTable=" + filterServerTable + "]";
+        return "TopicRouteData [orderTopicConf=" + orderTopicConf + ", queueDatas=" + queueDatas + ", brokerDatas=" +
+                brokerDatas + ", filterServerTable=" + filterServerTable + "]";
     }
 }

@@ -82,7 +82,7 @@ public class NamesrvStartup {
         final NamesrvConfig namesrvConfig = new NamesrvConfig();
         final NettyServerConfig nettyServerConfig = new NettyServerConfig();
         nettyServerConfig.setListenPort(9876);
-        if (commandLine.hasOption('c')) {
+        if (commandLine.hasOption('c')) {//通过 -c ConfigFilePath 命令指定配置文件路径
             String file = commandLine.getOptionValue('c');
             if (file != null) {
                 InputStream in = new BufferedInputStream(new FileInputStream(file));
@@ -98,7 +98,7 @@ public class NamesrvStartup {
             }
         }
 
-        if (commandLine.hasOption('p')) {
+        if (commandLine.hasOption('p')) {//是否打印配置
             InternalLogger console = InternalLoggerFactory.getLogger(LoggerName.NAMESRV_CONSOLE_NAME);
             MixAll.printObjectProperties(console, namesrvConfig);
             MixAll.printObjectProperties(console, nettyServerConfig);
@@ -142,7 +142,7 @@ public class NamesrvStartup {
             controller.shutdown();
             System.exit(-3);
         }
-
+        //注册 JVM 钩子函数，并启动服务器，以便监听 Broker、消息生产者的网络请求。
         Runtime.getRuntime().addShutdownHook(new ShutdownHookThread(log, new Callable<Void>() {
             @Override
             public Void call() throws Exception {

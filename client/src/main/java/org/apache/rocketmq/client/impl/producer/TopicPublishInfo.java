@@ -18,17 +18,24 @@ package org.apache.rocketmq.client.impl.producer;
 
 import java.util.ArrayList;
 import java.util.List;
+
 import org.apache.rocketmq.client.common.ThreadLocalIndex;
 import org.apache.rocketmq.common.message.MessageQueue;
 import org.apache.rocketmq.common.protocol.route.QueueData;
 import org.apache.rocketmq.common.protocol.route.TopicRouteData;
 
 public class TopicPublishInfo {
-    private boolean orderTopic = false;
-    private boolean haveTopicRouterInfo = false;
-    private List<MessageQueue> messageQueueList = new ArrayList<MessageQueue>();
+
+    private boolean orderTopic = false;//是否是顺序消息
+
+    private boolean haveTopicRouterInfo = false;//
+
+    private List<MessageQueue> messageQueueList = new ArrayList<MessageQueue>();//该主题队列的消息队列
+
     private volatile ThreadLocalIndex sendWhichQueue = new ThreadLocalIndex();
-    private TopicRouteData topicRouteData;
+    //每选择一次消息队列，该值就会自增 1，如果 Integer.MAX_VALUE，则重置为 0，用于选择消息队列。
+
+    private TopicRouteData topicRouteData;//topic 的路由元数据
 
     public boolean isOrderTopic() {
         return orderTopic;
@@ -66,6 +73,14 @@ public class TopicPublishInfo {
         this.haveTopicRouterInfo = haveTopicRouterInfo;
     }
 
+    /**
+     * 再一次消息发送过程中，可能会多次执行选择消息队列的方案，lastBrokerName 就是上一次选择的执行发送消息失败的 Broker。第一次执行消息队列选择时，
+     * lastBrokerName 为 null，此时直接用 sendWhichQueue 自增再来获取值，与当前路由表中消息队列个数取模，返回改位置的
+     * MessageQueue，如果消息发送在失败的话，下次进行消息队列选择时规避上次 MessageQueue 所在的 Broker，否则还是很有可能再次失败。
+     *
+     * @param lastBrokerName
+     * @return
+     */
     public MessageQueue selectOneMessageQueue(final String lastBrokerName) {
         if (lastBrokerName == null) {
             return selectOneMessageQueue();
@@ -73,8 +88,9 @@ public class TopicPublishInfo {
             int index = this.sendWhichQueue.getAndIncrement();
             for (int i = 0; i < this.messageQueueList.size(); i++) {
                 int pos = Math.abs(index++) % this.messageQueueList.size();
-                if (pos < 0)
+                if (pos < 0) {
                     pos = 0;
+                }
                 MessageQueue mq = this.messageQueueList.get(pos);
                 if (!mq.getBrokerName().equals(lastBrokerName)) {
                     return mq;
@@ -87,8 +103,9 @@ public class TopicPublishInfo {
     public MessageQueue selectOneMessageQueue() {
         int index = this.sendWhichQueue.getAndIncrement();
         int pos = Math.abs(index) % this.messageQueueList.size();
-        if (pos < 0)
+        if (pos < 0) {
             pos = 0;
+        }
         return this.messageQueueList.get(pos);
     }
 
@@ -105,8 +122,8 @@ public class TopicPublishInfo {
 
     @Override
     public String toString() {
-        return "TopicPublishInfo [orderTopic=" + orderTopic + ", messageQueueList=" + messageQueueList
-            + ", sendWhichQueue=" + sendWhichQueue + ", haveTopicRouterInfo=" + haveTopicRouterInfo + "]";
+        return "TopicPublishInfo [orderTopic=" + orderTopic + ", messageQueueList=" + messageQueueList +
+                ", sendWhichQueue=" + sendWhichQueue + ", haveTopicRouterInfo=" + haveTopicRouterInfo + "]";
     }
 
     public TopicRouteData getTopicRouteData() {

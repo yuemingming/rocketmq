@@ -75,12 +75,12 @@ public class NamesrvController {
 
     public boolean initialize() {
 
-        this.kvConfigManager.load();
+        this.kvConfigManager.load();//加载 KV 配置
 
-        this.remotingServer = new NettyRemotingServer(this.nettyServerConfig, this.brokerHousekeepingService);
+        this.remotingServer = new NettyRemotingServer(this.nettyServerConfig, this.brokerHousekeepingService);//创建 NettyServer 网络处理对象
 
         this.remotingExecutor =
-            Executors.newFixedThreadPool(nettyServerConfig.getServerWorkerThreads(), new ThreadFactoryImpl("RemotingExecutorThread_"));
+            Executors.newFixedThreadPool(nettyServerConfig.getServerWorkerThreads(), new ThreadFactoryImpl("RemotingExecutorThread_"));//创建远程执行器
 
         this.registerProcessor();
 
@@ -90,7 +90,7 @@ public class NamesrvController {
             public void run() {
                 NamesrvController.this.routeInfoManager.scanNotActiveBroker();
             }
-        }, 5, 10, TimeUnit.SECONDS);
+        }, 5, 10, TimeUnit.SECONDS);//NameServer 每个 10S 扫描一次 Broker，移除处于不激活状态的 Broker
 
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
@@ -98,7 +98,7 @@ public class NamesrvController {
             public void run() {
                 NamesrvController.this.kvConfigManager.printAllPeriodically();
             }
-        }, 1, 10, TimeUnit.MINUTES);
+        }, 1, 10, TimeUnit.MINUTES);//nameServer 每隔十分钟打印一次 KV 配置
 
         if (TlsSystemConfig.tlsMode != TlsMode.DISABLED) {
             // Register a listener to reload SslContext
