@@ -701,6 +701,15 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
         return this.defaultMQProducerImpl.queryMessageByUniqKey(topic, msgId);
     }
 
+    /**
+     * 在消息发送端，调用 batch 方法，将一批消息封装成 MessageBatch 对象。MessageBatch 继承自 Message 对象，MessageBatch 内部持有 List<Message> messaged.
+     * @param msgs
+     * @return
+     * @throws MQClientException
+     * @throws RemotingException
+     * @throws MQBrokerException
+     * @throws InterruptedException
+     */
     @Override
     public SendResult send(Collection<Message> msgs)
             throws MQClientException, RemotingException, MQBrokerException, InterruptedException {

@@ -708,6 +708,8 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                                       final TopicPublishInfo topicPublishInfo, final long timeout)
             throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
         long beginStartTime = System.currentTimeMillis();
+        //根据 MessageQueue 获取 Broker 的网络地址。如果 MQClientInstance 的 BrokerAddrTable 为缓存该 Broker 的信息，则从 NameServer 主动更新一下
+        // Topic 的路由信息。如果更新后还是找不到，则抛出 MQClientException，提示 Broker 不存在。
         String brokerAddr = this.mQClientFactory.findBrokerAddressInPublish(mq.getBrokerName());
         if (null == brokerAddr) {
             tryToFindTopicPublishInfo(mq.getTopic());
@@ -721,17 +723,19 @@ public class DefaultMQProducerImpl implements MQProducerInner {
             byte[] prevBody = msg.getBody();
             try {
                 //for MessageBatch,ID has been set in the generating process
+                //不是批量消息，为消息分配全局唯一 ID
                 if (!(msg instanceof MessageBatch)) {
                     MessageClientIDSetter.setUniqID(msg);
                 }
 
                 int sysFlag = 0;
                 boolean msgBodyCompressed = false;
+                //判断消息是否需要压缩
                 if (this.tryToCompressMessage(msg)) {
                     sysFlag |= MessageSysFlag.COMPRESSED_FLAG;
                     msgBodyCompressed = true;
                 }
-
+                //判断是否是事务消息
                 final String tranMsg = msg.getProperty(MessageConst.PROPERTY_TRANSACTION_PREPARED);
                 if (tranMsg != null && Boolean.parseBoolean(tranMsg)) {
                     sysFlag |= MessageSysFlag.TRANSACTION_PREPARED_TYPE;
@@ -748,7 +752,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                     checkForbiddenContext.setUnitMode(this.isUnitMode());
                     this.executeCheckForbiddenHook(checkForbiddenContext);
                 }
-
+                //如果注册了钩子函数，则执行消息发送之前的增强逻辑。通过 DefaultMQProducerImpl#registerSendMessageHook 注册狗子处理类，并且可以注册多个。
                 if (this.hasSendMessageHook()) {
                     context = new SendMessageContext();
                     context.setProducer(this);
@@ -769,7 +773,8 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                     }
                     this.executeSendMessageHookBefore(context);
                 }
-
+                //构建消息发送请求包。主要包含：生产者组、主题名称、默认创建主题 Key、该主题在单个 Broker 默认队列数、队列 ID（队列序列号）、消息系统标记（MessageSysFlag)
+                // 、消息发送时间、消息标记、消息扩展属性、消息重试次数、是否是批量消息。
                 SendMessageRequestHeader requestHeader = new SendMessageRequestHeader();
                 requestHeader.setProducerGroup(this.defaultMQProducer.getProducerGroup());
                 requestHeader.setTopic(msg.getTopic());
@@ -832,7 +837,8 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                         assert false;
                         break;
                 }
-
+                //如果注册了消息发送钩子函数，执行 after 逻辑。注意，就算消息发送过程中发生了 RemotingException、MQBrokerException、InterruptedException
+                // 时方法也会执行。
                 if (this.hasSendMessageHook()) {
                     context.setSendResult(sendResult);
                     this.executeSendMessageHookAfter(context);
