@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 import org.apache.rocketmq.common.UtilAll;
 import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.logging.InternalLogger;
@@ -34,24 +35,31 @@ import org.apache.rocketmq.store.DispatchRequest;
 import org.apache.rocketmq.store.config.StorePathConfigHelper;
 
 public class IndexService {
+
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
+
     /**
      * Maximum times to attempt index file creation.
      */
     private static final int MAX_TRY_IDX_CREATE = 3;
+
     private final DefaultMessageStore defaultMessageStore;
+
     private final int hashSlotNum;
+
     private final int indexNum;
+
     private final String storePath;
+
     private final ArrayList<IndexFile> indexFileList = new ArrayList<IndexFile>();
+
     private final ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
 
     public IndexService(final DefaultMessageStore store) {
         this.defaultMessageStore = store;
         this.hashSlotNum = store.getMessageStoreConfig().getMaxHashSlotNum();
         this.indexNum = store.getMessageStoreConfig().getMaxIndexNum();
-        this.storePath =
-            StorePathConfigHelper.getStorePathIndex(store.getMessageStoreConfig().getStorePathRootDir());
+        this.storePath = StorePathConfigHelper.getStorePathIndex(store.getMessageStoreConfig().getStorePathRootDir());
     }
 
     public boolean load(final boolean lastExitOK) {
@@ -66,8 +74,8 @@ public class IndexService {
                     f.load();
 
                     if (!lastExitOK) {
-                        if (f.getEndTimestamp() > this.defaultMessageStore.getStoreCheckpoint()
-                            .getIndexMsgTimestamp()) {
+                        if (f.getEndTimestamp() >
+                                this.defaultMessageStore.getStoreCheckpoint().getIndexMsgTimestamp()) {
                             f.destroy(0);
                             continue;
                         }
@@ -199,6 +207,7 @@ public class IndexService {
     }
 
     public void buildIndex(DispatchRequest req) {
+        //获取或创建 IndexFile 文件并获取所有文件最大的物理偏移量。如果该消息的物理偏移小于索引中文件的物理偏移，则说明是重复数据，忽略本次索引创建。
         IndexFile indexFile = retryGetAndCreateIndexFile();
         if (indexFile != null) {
             long endPhyOffset = indexFile.getEndPhyOffset();
@@ -218,7 +227,7 @@ public class IndexService {
                 case MessageSysFlag.TRANSACTION_ROLLBACK_TYPE:
                     return;
             }
-
+            //如果消息的唯一键不为空，则添加到 hash 的索引中，以便加速根据唯一键检查消息。
             if (req.getUniqKey() != null) {
                 indexFile = putKey(indexFile, msg, buildKey(topic, req.getUniqKey()));
                 if (indexFile == null) {
@@ -226,7 +235,7 @@ public class IndexService {
                     return;
                 }
             }
-
+            //构建索引键，RocketMQ 支持为同一个消息构建多个索引，多个索引键用空格分开。
             if (keys != null && keys.length() > 0) {
                 String[] keyset = keys.split(MessageConst.KEY_SEPARATOR);
                 for (int i = 0; i < keyset.length; i++) {
@@ -234,7 +243,8 @@ public class IndexService {
                     if (key.length() > 0) {
                         indexFile = putKey(indexFile, msg, buildKey(topic, key));
                         if (indexFile == null) {
-                            log.error("putKey error commitlog {} uniqkey {}", req.getCommitLogOffset(), req.getUniqKey());
+                            log.error("putKey error commitlog {} uniqkey {}", req.getCommitLogOffset(),
+                                    req.getUniqKey());
                             return;
                         }
                     }
@@ -270,8 +280,9 @@ public class IndexService {
 
         for (int times = 0; null == indexFile && times < MAX_TRY_IDX_CREATE; times++) {
             indexFile = this.getAndCreateLastIndexFile();
-            if (null != indexFile)
+            if (null != indexFile) {
                 break;
+            }
 
             try {
                 log.info("Tried to create index file " + times + " times");
@@ -314,10 +325,8 @@ public class IndexService {
         if (indexFile == null) {
             try {
                 String fileName =
-                    this.storePath + File.separator
-                        + UtilAll.timeMillisToHumanString(System.currentTimeMillis());
-                indexFile =
-                    new IndexFile(fileName, this.hashSlotNum, this.indexNum, lastUpdateEndPhyOffset,
+                        this.storePath + File.separator + UtilAll.timeMillisToHumanString(System.currentTimeMillis());
+                indexFile = new IndexFile(fileName, this.hashSlotNum, this.indexNum, lastUpdateEndPhyOffset,
                         lastUpdateIndexTimestamp);
                 this.readWriteLock.writeLock().lock();
                 this.indexFileList.add(indexFile);
@@ -330,6 +339,7 @@ public class IndexService {
             if (indexFile != null) {
                 final IndexFile flushThisFile = prevIndexFile;
                 Thread flushThread = new Thread(new Runnable() {
+
                     @Override
                     public void run() {
                         IndexService.this.flush(flushThisFile);
@@ -345,8 +355,9 @@ public class IndexService {
     }
 
     public void flush(final IndexFile f) {
-        if (null == f)
+        if (null == f) {
             return;
+        }
 
         long indexMsgTimestamp = 0;
 

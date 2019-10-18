@@ -19,9 +19,13 @@ package org.apache.rocketmq.store;
 import java.util.concurrent.atomic.AtomicLong;
 
 public abstract class ReferenceResource {
+
     protected final AtomicLong refCount = new AtomicLong(1);
+
     protected volatile boolean available = true;
+
     protected volatile boolean cleanupOver = false;
+
     private volatile long firstShutdownTimestamp = 0;
 
     public synchronized boolean hold() {
@@ -40,6 +44,13 @@ public abstract class ReferenceResource {
         return this.available;
     }
 
+    /**
+     * 初次调用是 this.available 为 true，设置 available 为 false，并设置初次关闭的时间戳为当前时间戳，然后调用 release()方法尝试释放资源，release 只有在引用次数小于 1
+     * 的情况下才会释放资源；如果引用次数大于 0，对比当前时间与 firstShutdownTimeStamp,如果已经超过了器最大拒绝存活期，每执行一次，将引用数减少 1000，知道引用数小于 0 时通过执行 release
+     * 方法释放资源
+     *
+     * @param intervalForcibly
+     */
     public void shutdown(final long intervalForcibly) {
         if (this.available) {
             this.available = false;
@@ -54,9 +65,11 @@ public abstract class ReferenceResource {
     }
 
     public void release() {
+        //将引用次数建议，如果引用次数小于等于 0，则执行 cleanup 方法。
         long value = this.refCount.decrementAndGet();
-        if (value > 0)
+        if (value > 0) {
             return;
+        }
 
         synchronized (this) {
 
@@ -70,6 +83,11 @@ public abstract class ReferenceResource {
 
     public abstract boolean cleanup(final long currentRef);
 
+    /**
+     * 判断是否清理完成，判断标准是引用次数小于等于 0 并且 cleanupOver 为 true，cleanupOver 为 true 的触发条件是 release 成功将 Map碰到By特Buffer 资源释放。
+     *
+     * @return
+     */
     public boolean isCleanupOver() {
         return this.refCount.get() <= 0 && this.cleanupOver;
     }
