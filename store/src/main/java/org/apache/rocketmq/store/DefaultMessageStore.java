@@ -555,6 +555,15 @@ public class DefaultMessageStore implements MessageStore {
         return commitLog;
     }
 
+    /**
+     * @param group         Consumer group that launches this query. 消费组名称
+     * @param topic         Topic to query. 主题名称
+     * @param queueId       Queue ID to query. 队列 ID
+     * @param offset        Logical offset to start from.待拉取偏移量
+     * @param maxMsgNums    Maximum count of messages to query. 最大拉取消息条数
+     * @param messageFilter Message filter used to screen desired messages. 消息过滤器
+     * @return
+     */
     public GetMessageResult getMessage(final String group, final String topic, final int queueId, final long offset,
                                        final int maxMsgNums, final MessageFilter messageFilter) {
         if (this.shutdown) {
@@ -570,28 +579,39 @@ public class DefaultMessageStore implements MessageStore {
         long beginTime = this.getSystemClock().now();
 
         GetMessageStatus status = GetMessageStatus.NO_MESSAGE_IN_QUEUE;
-        long nextBeginOffset = offset;
-        long minOffset = 0;
-        long maxOffset = 0;
+        long nextBeginOffset = offset;//待查找的队列偏移量
+        long minOffset = 0;//当前消息队列最小偏移量
+        long maxOffset = 0;//当前消息队列最大偏移量
 
         GetMessageResult getResult = new GetMessageResult();
 
-        final long maxOffsetPy = this.commitLog.getMaxOffset();
-
+        final long maxOffsetPy = this.commitLog.getMaxOffset();//当前 commitlog 文件最大偏移量
+        //根据主题名称与队列编号获取消息消费队列。
         ConsumeQueue consumeQueue = findConsumeQueue(topic, queueId);
         if (consumeQueue != null) {
+            //消息偏移量异常情况校对下一次拉取偏移量
             minOffset = consumeQueue.getMinOffsetInQueue();
             maxOffset = consumeQueue.getMaxOffsetInQueue();
-
+            //maxOffset =0 ,表示当前队列中没有消息，拉取结果：NO_MESSAGE_IN_QUEUE。
+            //如果当前 Broker 为主节点，下次拉取偏移量为 0
+            //如果当前 Broker 为从节点并且 offsetCheckInSlave 为 true，设置下次拉取偏移量为 0
+            //其他情况下再次拉取时使用原偏移量
             if (maxOffset == 0) {
                 status = GetMessageStatus.NO_MESSAGE_IN_QUEUE;
                 nextBeginOffset = nextOffsetCorrection(offset, 0);
+                //offset < minOffset,表示待拉取消息偏移量小于队列的起始偏移量小于队列的起始偏移量，拉取结果为：OFFSET_TOO_SMALL。
+                //如果当前 Broker 为主节点，下次拉取偏移量为队列的最小偏移量
+                //如果当前 Broker 为从节点并且 offsetCheckInSlave 为 true，下次拉取偏移量为队列的最小偏移量。
+                //其他情况下次拉取时使用原始偏移量
             } else if (offset < minOffset) {
                 status = GetMessageStatus.OFFSET_TOO_SMALL;
                 nextBeginOffset = nextOffsetCorrection(offset, minOffset);
+                //如果待拉取偏移量等于队列最大偏移量，拉取结果：OFFSET_ONVERFLOW_ONE。下次拉取偏移量依然为 offset
             } else if (offset == maxOffset) {
                 status = GetMessageStatus.OFFSET_OVERFLOW_ONE;
                 nextBeginOffset = nextOffsetCorrection(offset, offset);
+                //offset > maxOffset，表示偏移量越界，拉取结果：OFFSET_OVERFLOW_BSDLY
+                //此时需要考虑当前队列的偏移量是否为 0，如果当前队列的最小偏移为 0，则使用最小偏移量去纠正下次拉取偏移量；如果当前队列的最小偏移量不为 0，则使用最大偏移量来纠正下次拉取偏移量；
             } else if (offset > maxOffset) {
                 status = GetMessageStatus.OFFSET_OVERFLOW_BADLY;
                 if (0 == minOffset) {
@@ -647,7 +667,7 @@ public class DefaultMessageStore implements MessageStore {
                                     isTagsCodeLegal = false;
                                 }
                             }
-
+                            //根据偏移量拉取消息后，首先根据 ConsumeQueue 条目进行消息过滤，如果不匹配直接跳过该条消息，继续拉取下一条消息。
                             if (messageFilter != null && !messageFilter
                                     .isMatchedByConsumeQueue(isTagsCodeLegal ? tagsCode : null,
                                             extRet ? cqExtUnit : null)) {
@@ -667,7 +687,8 @@ public class DefaultMessageStore implements MessageStore {
                                 nextPhyFileStartOffset = this.commitLog.rollNextFile(offsetPy);
                                 continue;
                             }
-
+                            //如果消息根据 ConsumeQueue 条目通过过滤，则需要从 CommitLog 文件中加载整个消息体，然后根据属性进行过滤。当然如果过滤方式是 TAG
+                            // 模式，该方法默认返回 true。
                             if (messageFilter != null &&
                                     !messageFilter.isMatchedByCommitLog(selectResult.getByteBuffer().slice(), null)) {
                                 if (getResult.getBufferTotalSize() == 0) {
@@ -718,7 +739,6 @@ public class DefaultMessageStore implements MessageStore {
         }
         long eclipseTime = this.getSystemClock().now() - beginTime;
         this.storeStatsService.setGetMessageEntireTimeMax(eclipseTime);
-
         getResult.setStatus(status);
         getResult.setNextBeginOffset(nextBeginOffset);
         getResult.setMaxOffset(maxOffset);
@@ -1594,11 +1614,11 @@ public class DefaultMessageStore implements MessageStore {
 
         private final double diskSpaceWarningLevelRatio =
                 Double.parseDouble(System.getProperty("rocketmq.broker.diskSpaceWarningLevelRatio", "0.90"));
-                //通过系统参数 -Drocketmq.broker.diskSpaceWarningLevelRatio 设置，如果磁盘分区使用率超过该阈值，将设置磁盘不可写，拒绝消息的写入。
+        //通过系统参数 -Drocketmq.broker.diskSpaceWarningLevelRatio 设置，如果磁盘分区使用率超过该阈值，将设置磁盘不可写，拒绝消息的写入。
 
         private final double diskSpaceCleanForciblyRatio =
                 Double.parseDouble(System.getProperty("rocketmq.broker.diskSpaceCleanForciblyRatio", "0.85"));
-                //通过系统参数 -Drocketmq.broker.diskSpaceCleanForciblyRatio 设置，超过该阈值不会拒绝消息的写入，建议立即执行过期文件清除。
+        //通过系统参数 -Drocketmq.broker.diskSpaceCleanForciblyRatio 设置，超过该阈值不会拒绝消息的写入，建议立即执行过期文件清除。
 
         private long lastRedeleteTimestamp = 0;
 
@@ -1950,6 +1970,9 @@ public class DefaultMessageStore implements MessageStore {
                                     if (BrokerRole.SLAVE !=
                                             DefaultMessageStore.this.getMessageStoreConfig().getBrokerRole() &&
                                             DefaultMessageStore.this.brokerConfig.isLongPollingEnable()) {
+                                        //当新消息达到 CommitLog 时，ReputMessageService 线程将消息转发给
+                                        // ConsumeQueue、IndexFile，如果Broker 端开启了长轮询模式并且角色为主节点，则最终调用
+                                        // PullRequestHoldService 线程的 notifyMessageArriving 方法唤醒挂起线程，判断当前偏移。
                                         DefaultMessageStore.this.messageArrivingListener
                                                 .arriving(dispatchRequest.getTopic(), dispatchRequest.getQueueId(),
                                                         dispatchRequest.getConsumeQueueOffset() + 1,

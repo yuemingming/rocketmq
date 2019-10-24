@@ -76,6 +76,10 @@ public class PullMessageService extends ServiceThread {
         return scheduledExecutorService;
     }
 
+    /**
+     * 根据消费者组名从 MQClientInstance 中获取消费者内部实现类，然后强转为 DefaultMQPushConsumerImpl。
+     * @param pullRequest
+     */
     private void pullMessage(final PullRequest pullRequest) {
         final MQConsumerInner consumer = this.mQClientFactory.selectConsumer(pullRequest.getConsumerGroup());
         if (consumer != null) {
@@ -89,10 +93,12 @@ public class PullMessageService extends ServiceThread {
     @Override
     public void run() {
         log.info(this.getServiceName() + " service started");
-
+        //通用的设计技巧，通过外部终止线程
         while (!this.isStopped()) {
             try {
+                //获取一个 pullRequest，如果没有则阻塞
                 PullRequest pullRequest = this.pullRequestQueue.take();
+                //进行消息拉取
                 this.pullMessage(pullRequest);
             } catch (InterruptedException ignored) {
             } catch (Exception e) {

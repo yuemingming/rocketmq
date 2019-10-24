@@ -23,17 +23,24 @@ import org.apache.rocketmq.remoting.annotation.CFNullable;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 
 public class ConsumerSendMsgBackRequestHeader implements CommandCustomHeader {
+
     @CFNotNull
-    private Long offset;
+    private Long offset;//消息的物理偏移量
+
     @CFNotNull
-    private String group;
+    private String group;//消费组名
+
     @CFNotNull
-    private Integer delayLevel;
-    private String originMsgId;
-    private String originTopic;
+    private Integer delayLevel;//延迟级别，Rocket 不支持精确的定时消息调度，而是提供了几个延时级别，MessageStoreConfig#messageDelayLevel。
+
+    private String originMsgId;//消息 ID
+
+    private String originTopic;//消息主题
+
     @CFNullable
     private boolean unitMode = false;
-    private Integer maxReconsumeTimes;
+
+    private Integer maxReconsumeTimes;//最大重新消费次数，默认为 16 次。
 
     @Override
     public void checkFields() throws RemotingCommandException {
@@ -98,7 +105,8 @@ public class ConsumerSendMsgBackRequestHeader implements CommandCustomHeader {
 
     @Override
     public String toString() {
-        return "ConsumerSendMsgBackRequestHeader [group=" + group + ", originTopic=" + originTopic + ", originMsgId=" + originMsgId
-            + ", delayLevel=" + delayLevel + ", unitMode=" + unitMode + ", maxReconsumeTimes=" + maxReconsumeTimes + "]";
+        return "ConsumerSendMsgBackRequestHeader [group=" + group + ", originTopic=" + originTopic + ", originMsgId=" +
+                originMsgId + ", delayLevel=" + delayLevel + ", unitMode=" + unitMode + ", maxReconsumeTimes=" +
+                maxReconsumeTimes + "]";
     }
 }

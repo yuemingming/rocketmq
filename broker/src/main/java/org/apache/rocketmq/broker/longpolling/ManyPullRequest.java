@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ManyPullRequest {
+
     private final ArrayList<PullRequest> pullRequestList = new ArrayList<>();
 
     public synchronized void addPullRequest(final PullRequest pullRequest) {
@@ -30,6 +31,12 @@ public class ManyPullRequest {
         this.pullRequestList.addAll(many);
     }
 
+    /**
+     * 从 ManyPullRequest 获取当前该主题、队列所有的挂起任务。值得注意的事该方法使用了 synchronized，说明该数据会存在并发访问，该属性是 PullRequestHoldService
+     * 线程的私有属性，会存在并发？会存在。
+     *
+     * @return
+     */
     public synchronized List<PullRequest> cloneListAndClear() {
         if (!this.pullRequestList.isEmpty()) {
             List<PullRequest> result = (ArrayList<PullRequest>) this.pullRequestList.clone();

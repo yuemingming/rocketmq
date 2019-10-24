@@ -17,10 +17,17 @@
 package org.apache.rocketmq.client.consumer;
 
 import java.util.List;
+
 import org.apache.rocketmq.common.message.MessageQueue;
 
 /**
  * Strategy Algorithm for message allocating between consumers
+ * 五种实现类：
+ * 1. AllocateMessageQueueAveragely：平均分配
+ * 2. AllocateMessageQueueAveragelyByCircle:平均轮询分配
+ * 3. AllocateMessageQueueConsistentHash:一致性 hash
+ * 4. ALlocateMessageQueueByConfig:根据配置，为每一个消费者配置固定的消费队列
+ * 5. AllocateMessageQueueByMachineRoom:根据 Broker 部署机房名，对每个消费者负责不同的 Broker 上的队列。
  */
 public interface AllocateMessageQueueStrategy {
 
@@ -28,17 +35,13 @@ public interface AllocateMessageQueueStrategy {
      * Allocating by consumer id
      *
      * @param consumerGroup current consumer group
-     * @param currentCID current consumer id
-     * @param mqAll message queue set in current topic
-     * @param cidAll consumer set in current consumer group
+     * @param currentCID    current consumer id
+     * @param mqAll         message queue set in current topic
+     * @param cidAll        consumer set in current consumer group
      * @return The allocate result of given strategy
      */
-    List<MessageQueue> allocate(
-        final String consumerGroup,
-        final String currentCID,
-        final List<MessageQueue> mqAll,
-        final List<String> cidAll
-    );
+    List<MessageQueue> allocate(final String consumerGroup, final String currentCID, final List<MessageQueue> mqAll,
+                                final List<String> cidAll);
 
     /**
      * Algorithm name

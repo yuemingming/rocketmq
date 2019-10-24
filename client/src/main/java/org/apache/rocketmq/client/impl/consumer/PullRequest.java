@@ -19,11 +19,16 @@ package org.apache.rocketmq.client.impl.consumer;
 import org.apache.rocketmq.common.message.MessageQueue;
 
 public class PullRequest {
-    private String consumerGroup;
-    private MessageQueue messageQueue;
-    private ProcessQueue processQueue;
-    private long nextOffset;
-    private boolean lockedFirst = false;
+
+    private String consumerGroup;//消费者组
+
+    private MessageQueue messageQueue;//待拉取消费队列
+
+    private ProcessQueue processQueue;//消费处理队列，从Broker 拉取到的消息先存入 ProcessQueue，然后再提交到消费者消费线程池消费。
+
+    private long nextOffset;//待拉取的 MessageQueue 偏移量
+
+    private boolean lockedFirst = false;//是否被锁定
 
     public boolean isLockedFirst() {
         return lockedFirst;
@@ -68,30 +73,37 @@ public class PullRequest {
 
     @Override
     public boolean equals(Object obj) {
-        if (this == obj)
+        if (this == obj) {
             return true;
-        if (obj == null)
+        }
+        if (obj == null) {
             return false;
-        if (getClass() != obj.getClass())
+        }
+        if (getClass() != obj.getClass()) {
             return false;
+        }
         PullRequest other = (PullRequest) obj;
         if (consumerGroup == null) {
-            if (other.consumerGroup != null)
+            if (other.consumerGroup != null) {
                 return false;
-        } else if (!consumerGroup.equals(other.consumerGroup))
+            }
+        } else if (!consumerGroup.equals(other.consumerGroup)) {
             return false;
+        }
         if (messageQueue == null) {
-            if (other.messageQueue != null)
+            if (other.messageQueue != null) {
                 return false;
-        } else if (!messageQueue.equals(other.messageQueue))
+            }
+        } else if (!messageQueue.equals(other.messageQueue)) {
             return false;
+        }
         return true;
     }
 
     @Override
     public String toString() {
-        return "PullRequest [consumerGroup=" + consumerGroup + ", messageQueue=" + messageQueue
-            + ", nextOffset=" + nextOffset + "]";
+        return "PullRequest [consumerGroup=" + consumerGroup + ", messageQueue=" + messageQueue + ", nextOffset=" +
+                nextOffset + "]";
     }
 
     public ProcessQueue getProcessQueue() {

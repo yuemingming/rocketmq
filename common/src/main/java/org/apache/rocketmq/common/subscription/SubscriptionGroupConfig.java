@@ -21,21 +21,49 @@ import org.apache.rocketmq.common.MixAll;
 
 public class SubscriptionGroupConfig {
 
+    /**
+     * 消费组名
+     */
     private String groupName;
 
+    /**
+     * 是否可以消费，默认该值为 true，如果 consumeEnable=false，该消费组无法拉取消息，从而无法消费消息。
+     */
     private boolean consumeEnable = true;
+
+    /**
+     * 默认为 true，是否允许从队列最小偏移量开始消费，目前未使用该参数
+     */
     private boolean consumeFromMinEnable = true;
 
+    /**
+     * 默认为 true，设置该消费组是否能以广播模式消费，如果设置为 false，则表示只能以集群模式消费。
+     */
     private boolean consumeBroadcastEnable = true;
 
+    /**
+     * 重试队列个数，默认为 1，每一个 Broker 上一个重试队列。
+     */
     private int retryQueueNums = 1;
 
+    /**
+     * 消息最大重试次数
+     */
     private int retryMaxTimes = 16;
 
+    /**
+     * masterId
+     */
     private long brokerId = MixAll.MASTER_ID;
 
+    /**
+     * 如果消息堵塞（主），将转向该 BrokerId 的服务拉取信息，默认为 1.
+     */
     private long whichBrokerWhenConsumeSlowly = 1;
 
+    /**
+     * 当消息发送变化是是否立刻进行消息队列重新负载均衡。
+     */
     private boolean notifyConsumerIdsChangedEnable = true;
 
     public String getGroupName() {
@@ -122,51 +150,62 @@ public class SubscriptionGroupConfig {
         result = prime * result + ((groupName == null) ? 0 : groupName.hashCode());
         result = prime * result + retryMaxTimes;
         result = prime * result + retryQueueNums;
-        result =
-            prime * result + (int) (whichBrokerWhenConsumeSlowly ^ (whichBrokerWhenConsumeSlowly >>> 32));
+        result = prime * result + (int) (whichBrokerWhenConsumeSlowly ^ (whichBrokerWhenConsumeSlowly >>> 32));
         return result;
     }
 
     @Override
     public boolean equals(Object obj) {
-        if (this == obj)
+        if (this == obj) {
             return true;
-        if (obj == null)
+        }
+        if (obj == null) {
             return false;
-        if (getClass() != obj.getClass())
+        }
+        if (getClass() != obj.getClass()) {
             return false;
+        }
         SubscriptionGroupConfig other = (SubscriptionGroupConfig) obj;
-        if (brokerId != other.brokerId)
+        if (brokerId != other.brokerId) {
             return false;
-        if (consumeBroadcastEnable != other.consumeBroadcastEnable)
+        }
+        if (consumeBroadcastEnable != other.consumeBroadcastEnable) {
             return false;
-        if (consumeEnable != other.consumeEnable)
+        }
+        if (consumeEnable != other.consumeEnable) {
             return false;
-        if (consumeFromMinEnable != other.consumeFromMinEnable)
+        }
+        if (consumeFromMinEnable != other.consumeFromMinEnable) {
             return false;
+        }
         if (groupName == null) {
-            if (other.groupName != null)
+            if (other.groupName != null) {
                 return false;
-        } else if (!groupName.equals(other.groupName))
+            }
+        } else if (!groupName.equals(other.groupName)) {
             return false;
-        if (retryMaxTimes != other.retryMaxTimes)
+        }
+        if (retryMaxTimes != other.retryMaxTimes) {
             return false;
-        if (retryQueueNums != other.retryQueueNums)
+        }
+        if (retryQueueNums != other.retryQueueNums) {
             return false;
-        if (whichBrokerWhenConsumeSlowly != other.whichBrokerWhenConsumeSlowly)
+        }
+        if (whichBrokerWhenConsumeSlowly != other.whichBrokerWhenConsumeSlowly) {
             return false;
-        if (notifyConsumerIdsChangedEnable != other.notifyConsumerIdsChangedEnable)
+        }
+        if (notifyConsumerIdsChangedEnable != other.notifyConsumerIdsChangedEnable) {
             return false;
+        }
         return true;
     }
 
     @Override
     public String toString() {
-        return "SubscriptionGroupConfig [groupName=" + groupName + ", consumeEnable=" + consumeEnable
-            + ", consumeFromMinEnable=" + consumeFromMinEnable + ", consumeBroadcastEnable="
-            + consumeBroadcastEnable + ", retryQueueNums=" + retryQueueNums + ", retryMaxTimes="
-            + retryMaxTimes + ", brokerId=" + brokerId + ", whichBrokerWhenConsumeSlowly="
-            + whichBrokerWhenConsumeSlowly + ", notifyConsumerIdsChangedEnable="
-            + notifyConsumerIdsChangedEnable + "]";
+        return "SubscriptionGroupConfig [groupName=" + groupName + ", consumeEnable=" + consumeEnable +
+                ", consumeFromMinEnable=" + consumeFromMinEnable + ", consumeBroadcastEnable=" +
+                consumeBroadcastEnable + ", retryQueueNums=" + retryQueueNums + ", retryMaxTimes=" + retryMaxTimes +
+                ", brokerId=" + brokerId + ", whichBrokerWhenConsumeSlowly=" + whichBrokerWhenConsumeSlowly +
+                ", notifyConsumerIdsChangedEnable=" + notifyConsumerIdsChangedEnable + "]";
     }
 }

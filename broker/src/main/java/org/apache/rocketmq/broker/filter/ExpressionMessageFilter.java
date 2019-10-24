@@ -59,14 +59,15 @@ public class ExpressionMessageFilter implements MessageFilter {
 
     @Override
     public boolean isMatchedByConsumeQueue(Long tagsCode, ConsumeQueueExt.CqExtUnit cqExtUnit) {
+        //如果订阅消息为空，返回 true，不过滤。
         if (null == subscriptionData) {
             return true;
         }
-
+        //如果是类过滤模式，返回 true。
         if (subscriptionData.isClassFilterMode()) {
             return true;
         }
-
+        //如果是 TAG 过滤模式，并且消息的 tagsCode 为空或 tagCode 小于 0，返回 true，说明消息在发送时没有设置 tag。
         // by tags code.
         if (ExpressionType.isTagType(subscriptionData.getExpressionType())) {
 
@@ -77,7 +78,7 @@ public class ExpressionMessageFilter implements MessageFilter {
             if (subscriptionData.getSubString().equals(SubscriptionData.SUB_ALL)) {
                 return true;
             }
-
+            //如果订阅消息的 TAG hashcodes 集合中包含消息的 tagsCode，则返回 true。
             return subscriptionData.getCodeSet().contains(tagsCode.intValue());
         } else {
             // no expression or no bloom
