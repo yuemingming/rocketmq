@@ -784,6 +784,7 @@ public class MQClientInstance {
      * This method will be removed in the version 5.0.0,because filterServer was removed,and method <code>subscribe
      * (final String topic, final MessageSelector messageSelector)</code>
      * is recommended.
+     * 定时将消息端订阅信息中的类过滤模式的过滤类源码上传到 FilterServer。
      */
     @Deprecated
     private void uploadFilterClassToAllFilterServer(final String consumerGroup, final String fullClassName,
@@ -802,6 +803,7 @@ public class MQClientInstance {
         TopicRouteData topicRouteData = this.topicRouteTable.get(topic);
         if (topicRouteData != null && topicRouteData.getFilterServerTable() != null &&
                 !topicRouteData.getFilterServerTable().isEmpty()) {
+            //根据订阅主题获取该主题的路由消息，如果该主题路由信息中的 FilterServer 缓存表不为空，则需要将过滤类发送到 FIlterServer 上。
             Iterator<Entry<String, List<String>>> it = topicRouteData.getFilterServerTable().entrySet().iterator();
             while (it.hasNext()) {
                 Entry<String, List<String>> next = it.next();

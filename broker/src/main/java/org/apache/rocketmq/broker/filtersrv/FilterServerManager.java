@@ -18,6 +18,7 @@
 package org.apache.rocketmq.broker.filtersrv;
 
 import io.netty.channel.Channel;
+
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -27,6 +28,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+
 import org.apache.rocketmq.broker.BrokerController;
 import org.apache.rocketmq.broker.BrokerStartup;
 import org.apache.rocketmq.common.ThreadFactoryImpl;
@@ -38,13 +40,16 @@ import org.apache.rocketmq.remoting.common.RemotingUtil;
 public class FilterServerManager {
 
     public static final long FILTER_SERVER_MAX_IDLE_TIME_MILLS = 30000;
+
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
+
     private final ConcurrentMap<Channel, FilterServerInfo> filterServerTable =
-        new ConcurrentHashMap<Channel, FilterServerInfo>(16);
+            new ConcurrentHashMap<Channel, FilterServerInfo>(16);
+
     private final BrokerController brokerController;
 
-    private ScheduledExecutorService scheduledExecutorService = Executors
-        .newSingleThreadScheduledExecutor(new ThreadFactoryImpl("FilterServerManagerScheduledThread"));
+    private ScheduledExecutorService scheduledExecutorService =
+            Executors.newSingleThreadScheduledExecutor(new ThreadFactoryImpl("FilterServerManagerScheduledThread"));
 
     public FilterServerManager(final BrokerController brokerController) {
         this.brokerController = brokerController;
@@ -53,6 +58,7 @@ public class FilterServerManager {
     public void start() {
 
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
+
             @Override
             public void run() {
                 try {
@@ -64,9 +70,11 @@ public class FilterServerManager {
         }, 1000 * 5, 1000 * 30, TimeUnit.MILLISECONDS);
     }
 
+    /**
+     * 读取配置文件中的属性 FilterServerNums，如果当前运行的 FilterServer 进程数小于 FIlterServerNums 则构建 shell 命名并调用。
+     */
     public void createFilterServer() {
-        int more =
-            this.brokerController.getBrokerConfig().getFilterServerNums() - this.filterServerTable.size();
+        int more = this.brokerController.getBrokerConfig().getFilterServerNums() - this.filterServerTable.size();
         String cmd = this.buildStartCommand();
         for (int i = 0; i < more; i++) {
             FilterServerUtil.callShell(cmd, log);
@@ -85,12 +93,10 @@ public class FilterServerManager {
 
         if (RemotingUtil.isWindowsPlatform()) {
             return String.format("start /b %s\\bin\\mqfiltersrv.exe %s",
-                this.brokerController.getBrokerConfig().getRocketmqHome(),
-                config);
+                    this.brokerController.getBrokerConfig().getRocketmqHome(), config);
         } else {
-            return String.format("sh %s/bin/startfsrv.sh %s",
-                this.brokerController.getBrokerConfig().getRocketmqHome(),
-                config);
+            return String.format("sh %s/bin/startfsrv.sh %s", this.brokerController.getBrokerConfig().getRocketmqHome(),
+                    config);
         }
     }
 
@@ -98,6 +104,13 @@ public class FilterServerManager {
         this.scheduledExecutorService.shutdown();
     }
 
+    /**
+     * 在 Broker 端处理 REGISTER_FILTER_SERVER 命令，先从 filterServerTable 中以网络通道为 key 获取 FilterFerverInfo，如果不等于
+     * 空，则更新一下上次更新时间为当前时间，否则创建一个新的 FilterServerInfo 对象，并加入到 filterServerTable 路由表中。
+     *
+     * @param channel
+     * @param filterServerAddr
+     */
     public void registerFilterServer(final Channel channel, final String filterServerAddr) {
         FilterServerInfo filterServerInfo = this.filterServerTable.get(channel);
         if (filterServerInfo != null) {
@@ -129,8 +142,7 @@ public class FilterServerManager {
     public void doChannelCloseEvent(final String remoteAddr, final Channel channel) {
         FilterServerInfo old = this.filterServerTable.remove(channel);
         if (old != null) {
-            log.warn("The Filter Server<{}> connection<{}> closed, remove it", old.getFilterServerAddr(),
-                remoteAddr);
+            log.warn("The Filter Server<{}> connection<{}> closed, remove it", old.getFilterServerAddr(), remoteAddr);
         }
     }
 
@@ -144,8 +156,16 @@ public class FilterServerManager {
         return addr;
     }
 
+    /**
+     * FilterServer 与 Broker 通过心跳维持 FilterServer 在 Broker 端的注册信息，同样在 Broker 每隔 10s 扫描一下该注册表，如果 30s
+     * 未收到FilterServerTable 的注册信息，将关闭 Broker 与 FilterServer 的连接。Broker 为了避免 FilterServer 的异常退出导致 FilterServer
+     * 进程的个数越来越少，同样提供一个定时任务每 30s 检测一下当前存活的 FilterServerTable 进程的个数，如果当前存活的 FIlterServer 进程个数小于配置的数量，
+     * 则自动创建一个 FilterServer 进程。
+     */
     static class FilterServerInfo {
+
         private String filterServerAddr;
+
         private long lastUpdateTimestamp;
 
         public String getFilterServerAddr() {

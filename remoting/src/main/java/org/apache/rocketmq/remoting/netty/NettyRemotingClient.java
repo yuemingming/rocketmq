@@ -438,7 +438,7 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
                         Channel channelNew = this.createChannel(newAddr);
                         if (channelNew != null) {
                             return channelNew;
-                        }
+                         }
                     }
                 }
             } catch (Exception e) {

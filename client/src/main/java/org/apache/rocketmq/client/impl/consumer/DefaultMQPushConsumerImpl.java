@@ -897,6 +897,15 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
         }
     }
 
+    /**
+     * 构建订阅消息，然后将该订阅消息添加到 RebalanceImpl 中，其主要目的是 RebalanceImpl 会对订阅消息表中的主题进行消息队列的负载，
+     * 构建消息拉取任务，以便 PullMessagesService 线程拉取信息。
+     *
+     * @param topic
+     * @param fullClassName
+     * @param filterClassSource
+     * @throws MQClientException
+     */
     public void subscribe(String topic, String fullClassName, String filterClassSource) throws MQClientException {
         try {
             SubscriptionData subscriptionData =
